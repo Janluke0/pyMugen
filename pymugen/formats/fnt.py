@@ -35,25 +35,48 @@ class FntHeader(ctypes.Structure):
 
         ('txt_offset',ctypes.c_uint32),
         ('txt_len',ctypes.c_uint32),
-        ('BLANK', ctypes.ARRAY(ctypes.c_uint8,40))
+        ('BLANK', ctypes.ARRAY(ctypes.c_char,40))
     ]
     _pcx = None
-    _text = None
+    _conf = None
     def __repr__(self): 
         out = f"{self.__class__.__name__}("
         for k,_ in self._fields_:
             out += f"{k}={getattr(self, k)}, "
         return out[:-2] + ")"
 
+def parse(conf):
+    res = {}
+    p = None
+    for l in conf.splitlines():
+        if l.strip().startswith(";") or l.strip()=="":
+            continue
+        elif  l.startswith("["):
+            n = l.split("[")[1].split("]")[0].lower()
+            res[n] = {}
+            p = res[n] 
+        else:
+            if "=" in l:
+                k,v = l.strip().split("=")
+                if ',' in v:
+                    v = (*[int(n) for n in v.strip().split(',')],)
+                p[k.strip().lower()] = v
+            else:
+                t = [v.strip() for v in l.strip().split()]
+                if '0x' in t[0]:
+                   t[0] =  bytes.fromhex(t[0].replace('0x','')).decode('ascii')
+                p[t[0]] = int(t[1]), int(t[2])
+    return res
 
 def from_file(fname):
     with open(fname,"rb") as fp:
         bf = fp.read(ctypes.sizeof(FntHeader))
         f = FntHeader.from_buffer_copy(bf)
-        print(f)
+        #print(f)
         fp.seek(f.pcx_offset)
         f._pcx = read_stream(fp)
-        fp.seek(f.txt_offset)
-        f._text = str(fp.read(f.txt_len))
+        skip = 64 #????????????
+        fp.seek(f.txt_offset+skip)
+        f._conf = parse(fp.read(f.txt_len-skip).decode('utf-8'))
     return f
 
