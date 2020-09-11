@@ -10,4 +10,5 @@ if __name__=='__main__':
     print(c._snd.groups)
     print(c._sff.groups)
     print(c._air)
+    print(c._palettes)
     

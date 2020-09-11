@@ -1,5 +1,5 @@
 from ..formats.utils.parser import parse 
-from ..formats import cns, air, sff, snd
+from ..formats import cns, air, sff, snd, act
 from collections import namedtuple
 import pathlib,os
 
@@ -18,7 +18,12 @@ class Character:
 
     def _readfiles(self):
         #cmd
-        # TODO 
+        # TODO
+        #pal
+        self._palettes = []
+        for f in self.files:
+            if f.startswith("pal"):
+                self._palettes.append(act.from_file(self.directory / self.files[f]))
         #cns
         self._cns = cns.parse_cns(self.directory / self.files["cns"], ENCODING)
         #st
@@ -34,8 +39,5 @@ class Character:
         #ai 
         pass
     
-    @staticmethod
-    def from_directory(path):
-        pass
 
 
