@@ -1,0 +1,49 @@
+//TODO: ternary operator and priority
+?atom: ESCAPED_STRING -> str
+        | SIGNED_FLOAT -> float
+        | SIGNED_INT -> int
+        | WORD ->  var
+
+?binop: binop_0| binop_1 | binop_2
+    | binop_3| binop_4   
+
+?binop_0.14: expression "**" expression -> op_pow
+?binop_1.13: expression "*" expression -> op_mul
+        | expression "/" expression -> op_div
+        | expression "%" expression -> op_mod
+        
+?binop_2.12: expression "+" expression -> op_sum
+        | expression "-" expression-> op_sub
+        
+?binop_3.11: expression "<=" expression -> op_lt_or_eq
+        | expression ">=" expression -> op_gt_or_eq
+        | expression ">" expression -> op_gt
+        | expression "<" expression -> op_lt
+        
+?binop_4.10: expression "=" expression -> op_eq
+        | expression "!=" expression -> op_neq
+        | expression "&&" expression -> op_and
+        | expression "||" expression -> op_or
+
+
+?assign: WORD ":=" expression 
+
+fn_call: WORD "(" expression ("," expression)*  ")"
+
+?unaryop.90: "!" expression -> op_not
+        | "~" expression -> op_bw_not
+        | "-" expression -> op_negate
+
+    
+?expression: atom
+        | fn_call
+        | unaryop
+        | binop
+        | assign
+        | "(" expression ")" 
+%import common.ESCAPED_STRING
+%import common.SIGNED_FLOAT
+%import common.SIGNED_INT
+%import common.WORD
+%import common.WS
+%ignore WS
