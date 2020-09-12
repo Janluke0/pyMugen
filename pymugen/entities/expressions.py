@@ -78,29 +78,32 @@ class BaseEnviroment:
         self.variables = {}
         return t
 
+
+    
 class ExpressionInterpreter(Interpreter):
     _env = BaseEnviroment()
     #cast types
-    def int(self, tree):
-        return int(tree.children[0])
-    
-    def float(self, tree):
-        return float(tree.children[0])
-    
-    def str(self, tree):
-        return str(tree.children[0])
 
-    #return variable value
-    def var(self, tree):
-        name = tree.children[0]
-        try:
-            return self._env[name]
-        except KeyError:            
-            raise UndefinedVariable(name)
+    def _eval_token(self, token):
+        t = token.type.lower()
+        v = token.value
+        if t == "var":      
+            name = str(v)      
+            try:
+                return self._env[name]
+            except KeyError:            
+                raise UndefinedVariable(name)
+        return eval(t)(v)
+
+    def atom(self, tree):
+        return self._eval_token(tree.children[0])
+
 
     def assign(self, tree):
         name = tree.children[0]
-        v = self.visit(tree.children[1])
+        v = tree.children[1]
+        v = self.visit(v) if hasattr(v,"data") else self._eval_token(v)
+
         self._env[name] = v
         return v
 
@@ -114,12 +117,7 @@ class ExpressionInterpreter(Interpreter):
 
     def _op(self, tree, fn):
         args = [self.visit(c) for c in tree.children]
-        #TODO: investigare
-        args = [a[0] if hasattr(a,'__getitem__') else a for a in args ]
-        try:
-            return fn(*args)
-        except:
-            return fn(args)
+        return fn(*args)
 
     def op_sum(self, tree):
         return self._op(tree, op.add)
