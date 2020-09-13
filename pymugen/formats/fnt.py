@@ -1,5 +1,6 @@
 import ctypes
 from .images.pcx import read_stream
+from ._base import AbstractFormat
 """
 /*--| FNT file structure |--------------------------------------------------*\
 /*
@@ -80,3 +81,41 @@ def from_file(fname):
         f._conf = parse(fp.read(f.txt_len-skip).decode('utf-8'))
     return f
 
+class Fnt(AbstractFormat):
+    _max_keys = 1 #char
+    _formats_avaible = ["fnt"]
+
+    def __init__(self, source, *args, **kwargs):
+        super().__init__(source, encoding=None, read_mode="rb", write_mode="wb", *args, **kwargs)
+        if self._data is None:
+            self._data = None
+
+    def get_item(self, char):
+        _m = self._data._conf["map"]
+        if char not in _m:
+            raise IndexError()
+        #ci = _m[char]
+        #char = font_img[:,ci[0]:ci[0]+ci[1]]
+        return  "IMAGE" #TODO: return image of the char
+
+    def set_item(self, index, value=None):
+        #TODO
+        pass
+   
+    def get_keys(self):
+        return self._data._conf["map"].keys()
+   
+    def _read(self):        
+        bf = self._buff.read(ctypes.sizeof(FntHeader))
+        f = FntHeader.from_buffer_copy(bf)
+        #print(f)
+        self._buff.seek(f.pcx_offset)
+        f._pcx = read_stream(self._buff)
+        skip = 64 #????????????
+        self._buff.seek(f.txt_offset+skip)
+        f._conf = parse(self._buff.read(f.txt_len-skip).decode('utf-8'))
+        self._data = f
+
+    def _write(self, _format):
+        #TODO: 
+        return super()._write(_format)

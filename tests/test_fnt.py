@@ -5,8 +5,11 @@ except:
 from pymugen.formats.fnt import from_file
 from pymugen.formats.sff import apply_palette
 import matplotlib.pyplot as plt
-
+from pymugen.formats import Fnt
+import unittest as ut
+import os
 import numpy as np
+
 def plot_text(font_img, shape, _map,text):
     out = np.zeros((shape[1], shape[0]*len(text) + len(text), 3))
     print(out.shape, font_img.shape)
@@ -33,3 +36,19 @@ if __name__ == "__main__":
     plt.imshow(apply_palette(*font._pcx))
     plt.show()
 
+
+class FntTest(ut.TestCase):
+    def test_open(self):
+        with Fnt("tests/test_data/fonts/num1.fnt") as fnt:
+            self.assertIsNotNone(fnt)
+            self.assertIsNotNone(fnt['0'])
+            for char, img in fnt:
+                self.assertTrue(type(char) is str and len(char)==1)
+            self.assertTrue(True)
+            
+    @ut.skip
+    def test_save(self):
+        dst = "/tests/test_data/test.save.fnt"
+        with Fnt("tests/test_data/fonts/num1.fnt") as fnt:
+            fnt.save(dst)
+            self.assertTrue(os.path.isfile(dst))
