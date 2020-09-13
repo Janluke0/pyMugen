@@ -1,6 +1,8 @@
 import ctypes
-from collections import namedtuple
+import io
+import wave
 
+from ._base import AbstractFormat
 """
 /*--| SND file structure
 |--------------------------------------------------*\
@@ -53,14 +55,23 @@ class SndSubHeader(ctypes.Structure):
         ('group_num',ctypes.c_uint32),
         ('sound_num',ctypes.c_uint32),
     ]
+    _wave = None
     @property
     def wave(self):
-        return self._params, self._frames
+        return  wave.open(self._wave)
 
     @wave.setter
     def wave(self, wav):
-        self._params = wav.getparams()
-        self._frames = wav.readframes(self._params[3])
+        if type(wav) is wave.Wave_read:
+            self._wave = io.BytesIO()
+            dst = wave.open(self._wave,"wb")
+            dst.setparams(wav.getparams())
+            dst.writeframes(wav.readframes(wav.getnframes()))
+            dst.close()
+            self._wave.seek(0)
+           
+        else:
+            raise ValueError()
 
     def __repr__(self): 
         out = f"{self.__class__.__name__}("
@@ -68,32 +79,54 @@ class SndSubHeader(ctypes.Structure):
             out += f"{k}={getattr(self, k)}, "
         return out[:-2] + ")"
 
-import wave
-def from_file(fname):
-    sounds = []
-    with open(fname, "rb") as fp:
-        buf = fp.read(ctypes.sizeof(SndHeader))
+
+
+class Snd(AbstractFormat):
+    _max_keys = 2 #group and number
+    _formats_avaible = ["snd"]
+    def __init__(self, source, *args, **kwargs):
+        super().__init__(source, encoding=None, read_mode="rb", write_mode="wb", *args, **kwargs)
+        if self._data is None:
+            self._data = [None,[]] 
+
+    def get_item(self, group, num):
+        for s in self._data[1]:
+            if s.group_num == group and s.sound_num == num:
+                return s.wave 
+        raise IndexError()
+
+    def set_item(self, index, value=None):
+        #TODO
+        #if new update file header
+        pass
+   
+    def get_keys(self):
+        group_nums = {s.group_num for s in self._data[1]}
+        groups = {}
+        for gn in group_nums:
+            groups[gn] = [s.sound_num for s in self._data if s.group_num == gn]
+        return groups
+   
+    def _read(self):
+        self._data = [None,[]] 
+        buf = self._buff.read(ctypes.sizeof(SndHeader))
         h = SndHeader.from_buffer_copy(buf)
-        fp.seek(h.first_subheader_offset)
-        buf = fp.read(ctypes.sizeof(SndSubHeader))
+        self._buff.seek(h.first_subheader_offset)
+        buf = self._buff.read(ctypes.sizeof(SndSubHeader))
+        self._data[0] = h
         while buf:
             sh = SndSubHeader.from_buffer_copy(buf)
-            sh.wave = wave.open(fp)
-            sounds.append(sh)
-            """
-            print( "Number of channels",wav.getnchannels())
-            print ( "Sample width",wav.getsampwidth())
-            print ( "Frame rate.",wav.getframerate())
-            print ("Number of frames",wav.getnframes())
-            print ( "parameters:",wav.getparams())
-            print(sh, wav)# len(wav_buf), wav_buf[:12])
-            """
-            fp.seek(sh.next_subheader_offset)
-            buf = fp.read(ctypes.sizeof(SndSubHeader))
-    return sounds
+            sh.wave = wave.open(self._buff)
+            self._data[1].append(sh)
+            self._buff.seek(sh.next_subheader_offset)
+            buf = self._buff.read(ctypes.sizeof(SndSubHeader))
 
 
-class Snd:
+    def _write(self, _format):
+        #TODO
+        pass
+
+class _Snd:
     def __init__(self, fname):
         super().__init__()
         self._sounds = from_file(fname)

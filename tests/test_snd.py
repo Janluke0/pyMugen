@@ -22,3 +22,6 @@ class SndTest(ut.TestCase):
     def test_open(self):
         with Snd("tests/test_data/kfm/kfm.snd") as snd:
             self.assertIsNotNone(snd)
+            self.assertIsNotNone(snd[0,0])
+            #print(snd.get_keys())
+            #self.assertEqual(type(snd[0,0]), "wave")
