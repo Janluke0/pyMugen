@@ -23,5 +23,6 @@ class SndTest(ut.TestCase):
         with Snd("tests/test_data/kfm/kfm.snd") as snd:
             self.assertIsNotNone(snd)
             self.assertIsNotNone(snd[0,0])
-            #print(snd.get_keys())
-            #self.assertEqual(type(snd[0,0]), "wave")
+            for (group, n), wav in snd:
+                pass
+            self.assertTrue(True)

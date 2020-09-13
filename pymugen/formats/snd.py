@@ -58,20 +58,23 @@ class SndSubHeader(ctypes.Structure):
     _wave = None
     @property
     def wave(self):
-        return  wave.open(self._wave)
-
+        w = wave.open(self._wave,"r")
+        self._wave.seek(0)
+        return  w
     @wave.setter
     def wave(self, wav):
+        #print(wav[0:10])
         if type(wav) is wave.Wave_read:
             self._wave = io.BytesIO()
-            dst = wave.open(self._wave,"wb")
+            dst = wave.open(self._wave,"w")
             dst.setparams(wav.getparams())
             dst.writeframes(wav.readframes(wav.getnframes()))
             dst.close()
             self._wave.seek(0)
-           
+        elif type(wav) is bytes:
+            self._wave = io.BytesIO(wav)
         else:
-            raise ValueError()
+            raise ValueError(type(wav))
 
     def __repr__(self): 
         out = f"{self.__class__.__name__}("
@@ -102,9 +105,9 @@ class Snd(AbstractFormat):
    
     def get_keys(self):
         group_nums = {s.group_num for s in self._data[1]}
-        groups = {}
+        groups = []
         for gn in group_nums:
-            groups[gn] = [s.sound_num for s in self._data if s.group_num == gn]
+            groups.extend([(gn, s.sound_num) for s in self._data[1] if s.group_num == gn])
         return groups
    
     def _read(self):
@@ -116,7 +119,7 @@ class Snd(AbstractFormat):
         self._data[0] = h
         while buf:
             sh = SndSubHeader.from_buffer_copy(buf)
-            sh.wave = wave.open(self._buff)
+            sh.wave = self._buff.read(sh.next_subheader_offset)#wave.open(self._buff)
             self._data[1].append(sh)
             self._buff.seek(sh.next_subheader_offset)
             buf = self._buff.read(ctypes.sizeof(SndSubHeader))
@@ -125,23 +128,3 @@ class Snd(AbstractFormat):
     def _write(self, _format):
         #TODO
         pass
-
-class _Snd:
-    def __init__(self, fname):
-        super().__init__()
-        self._sounds = from_file(fname)
-
-    def get_sound(self, group, num):
-        for s in self._sounds:
-            if s.group_num == group and s.sound_num == num:
-                return s.wave
-        return None
-
-
-    @property
-    def groups(self):
-        group_nums = {s.group_num for s in self._sounds}
-        groups = {}
-        for gn in group_nums:
-            groups[gn] = [s.sound_num for s in self._sounds if s.group_num == gn]
-        return groups
