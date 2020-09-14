@@ -18,7 +18,7 @@ class SFFSprite:
     def palette(self):
         return self.palettes[self.header.linked]        
         
-    def as_image(self, _type="rgba", palette=None):
+    def as_image(self, _type="rgba", palette=None, PIL=False):
         """
             type: str [rgba,   rgb   or cmap]
                       (x,y,4), (x,y,3), (x,y)
@@ -28,16 +28,19 @@ class SFFSprite:
         """
         h = self.header
         if palette is None:
-            img = SFFSprite._apply_palette(h.image, self.palette.data, _type)
+            img = SFFSprite._apply_palette(h.image, self.palette.data, _type, PIL)
         elif isinstance(palette,int):
-            img = SFFSprite._apply_palette(h.image, self.palettes[palette].data, _type)
+            img = SFFSprite._apply_palette(h.image, self.palettes[palette].data, _type, PIL)
         else:
-            img = SFFSprite._apply_palette(h.image, palette, _type)
+            img = SFFSprite._apply_palette(h.image, palette, _type, PIL)
             
         return img
 
     @staticmethod
-    def _apply_palette(img, pal, _type):
+    def _apply_palette(img, pal, _type, use_pil):
+        if use_pil:
+            from PIL import Image
+
         if _type == "rgb":
             out = np.empty((*img.shape,3), dtype=np.uint8)
             for i in range(out.shape[0]):
@@ -56,8 +59,16 @@ class SFFSprite:
                     else:
                         out[i,j,3] = 255
         elif _type == "cmap":
-            return img
-        return out
+            if use_pil:
+                return Image.fromarray(img)
+            else:
+                return img
+            
+        
+        if use_pil:
+            return Image.fromarray(out)
+        else:
+            return out
 
 SFFPalette = namedtuple("SFFPalette",["group","n","data"])
 
