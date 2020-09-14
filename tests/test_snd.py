@@ -1,6 +1,9 @@
-from . import context
-from pymugen.formats.snd import Snd
-
+try:
+    from . import context
+except:
+    import context 
+from pymugen.formats import Snd
+import unittest as ut
 import wave 
 
 if __name__ == "__main__":
@@ -14,3 +17,12 @@ if __name__ == "__main__":
     dst.setparams(params)
     dst.writeframes(data)
     dst.close()
+
+class SndTest(ut.TestCase):
+    def test_open(self):
+        with Snd("tests/test_data/kfm/kfm.snd") as snd:
+            self.assertIsNotNone(snd)
+            self.assertIsNotNone(snd[0,0])
+            for (group, n), wav in snd:
+                pass
+            self.assertTrue(True)

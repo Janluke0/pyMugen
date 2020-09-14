@@ -133,27 +133,7 @@ class StateController:
         out += f", args={self.args})"
         return out
 
-class Trigger:
-    def __init__(self, condition):
-        """
-            condition: str
-                the condition as rawstring
-                TODO: parse condition
 
-        """
-        super().__init__()
-        self.condition = condition
-        self.subtriggers = []
-    def __repr__(self):
-        out = f"Trigger(condition='{self.condition}'"
-        out += f", subtriggers={self.subtriggers})"
-        return out
-
-    def compress(self):
-        cond = f"({self.condition}) "
-        for sub in self.subtriggers:
-            cond += f"&& ({sub.condition}) "
-        return Trigger(cond)
 """   
 # for now just focus on reading files the following
 # will be useful when try to build a engine
@@ -197,16 +177,16 @@ def parse_cns(fname, encoding=None):
                 if k.startswith("trigger"):
                     t_code = k.replace("trigger","").strip().lower()
                     if t_code == "all":
-                        t_all = Trigger(v)
+                        t_all = [v]
                     else:
                         n = int(t_code)
-                        t = Trigger(v)
+                        t = [v]
                         if t_all is not None:
-                            t.subtriggers.append(t_all)
+                            t.append(t_all)
                         if len(triggers) < n:
                             triggers.append(t)
                         else:
-                            triggers[-1].subtriggers.append(t)
+                            triggers[-1].append(t)
             args = {k:v for k,v in opts.items() 
                     if not k.startswith("trigger") and k !='type'} 
             ctrl = StateController(state_code, ctrl_name.strip(), se['type'], triggers, args)

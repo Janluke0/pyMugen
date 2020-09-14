@@ -63,21 +63,20 @@ SFFPalette = namedtuple("SFFPalette",["group","n","data"])
 
 class SFF:
     def __init__(self, file, progress_cb=None):
-        super().__init__()
-        if type(file) is str:     
+        super().__init__() 
             #TODO: check format       
-            if True:# is V1
-                t = sffv1.from_file(file,progress_cb)
-                self._sprites, self._header, self._palettes = (*t,)
-                self.tmp = {}
-                for s in self._sprites:
-                    spr = SFFSprite(s, self._palettes)
-                    if s.groupno not in self.tmp:
-                        self.tmp[s.groupno] = {s.imageno:spr}
-                    else:                        
-                        self.tmp[s.groupno][s.imageno] = spr
-            else:# is V2
-                pass
+        if True:# is V1
+            t = sffv1.from_file(file,progress_cb)
+            self._sprites, self._header, self._palettes = (*t,)
+            self.tmp = {}
+            for s in self._sprites:
+                spr = SFFSprite(s, self._palettes)
+                if s.groupno not in self.tmp:
+                    self.tmp[s.groupno] = {s.imageno:spr}
+                else:                        
+                    self.tmp[s.groupno][s.imageno] = spr
+        else:# is V2
+            pass
 
     def get_image(self, groupno, imageno, palette=None, _type="rgba"):
         spr = self.tmp[groupno][imageno]
