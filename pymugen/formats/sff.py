@@ -18,7 +18,7 @@ class SFFSprite:
     def palette(self):
         return self.palettes[self.header.linked]        
         
-    def as_image(self, _type="rgba", palette=None, PIL=False):
+    def as_image(self, _type="rgba", palette=None, use_PIL=False):
         """
             type: str [rgba,   rgb   or cmap]
                       (x,y,4), (x,y,3), (x,y)
@@ -28,11 +28,11 @@ class SFFSprite:
         """
         h = self.header
         if palette is None:
-            img = SFFSprite._apply_palette(h.image, self.palette.data, _type, PIL)
+            img = SFFSprite._apply_palette(h.image, self.palette.data, _type, use_PIL)
         elif isinstance(palette,int):
-            img = SFFSprite._apply_palette(h.image, self.palettes[palette].data, _type, PIL)
+            img = SFFSprite._apply_palette(h.image, self.palettes[palette].data, _type, use_PIL)
         else:
-            img = SFFSprite._apply_palette(h.image, palette, _type, PIL)
+            img = SFFSprite._apply_palette(h.image, palette, _type, use_PIL)
             
         return img
 
@@ -89,9 +89,9 @@ class SFF:
         else:# is V2
             pass
 
-    def get_image(self, groupno, imageno, palette=None, _type="rgba"):
+    def get_image(self, groupno, imageno, palette=None, _type="rgba", use_PIL=False):
         spr = self.tmp[groupno][imageno]
-        return spr.as_image(palette=palette, _type=_type)
+        return spr.as_image(palette=palette, _type=_type, use_PIL=use_PIL)
         
     #TODO return SFFSprite
     def get_sprite(self, groupno, imageno, palette=None, ret_alphas=False):
