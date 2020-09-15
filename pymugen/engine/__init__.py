@@ -2,6 +2,7 @@ import arcade, os
 from ..formats.sff import SFF
 from ..formats.air import from_file, LOOP_START
 from PIL import Image
+from functools import cmp_to_key
 
 SPRITE_SCALING = 3
 
@@ -85,7 +86,6 @@ class Player(arcade.Sprite):
         t = frame.group_number, frame.image_number, self.mirrored
 
         if t not in self._texture_map:
-            self._texture_map[t] = len(self.textures)
             img = self.sff.get_image(t[0],t[1],use_PIL=True)
             if self.mirrored:
                 img = img.transpose(Image.FLIP_LEFT_RIGHT)
@@ -98,20 +98,22 @@ class Player(arcade.Sprite):
             
             self.append_texture(arcade.Texture(f"spr_{t[0]}-{t[1]}{'_m' if self.mirrored else ''}",img))
             #########FIXME: box size looks fine but not positioning 
-            points = []
-            #TODO: merge point to obtain extrernal poligon
+            boxes = []
             for cb in frame.collision_boxes:
                 x0, y0, x2, y2 = cb
-                y0, y2 = -y0 - frame.y_offset, -y2 - frame.y_offset
-                # 0-→1
-                # ↑  ↓
-                # 3←-2
-                points.extend([(x0,y0), (x2,y0), (x2,y2), (x0,y2)])
-            self.set_hit_box(points)
+                y0, y2 = -y0 - img.height//2, -y2 - img.height//2
+                if not self.mirrored:
+                    x0, x2 = x0 - img.width//6, x2 - img.width//6
+                else:
+                    x0, x2 = x0 + img.width//8, x2 + img.width//8
+                boxes.append([(x0,y0), (x2,y2)])
+            self._texture_map[t] = len(self.textures)-1, merge(boxes)[-1]
+            
             #self.center_x = frame.x_offset
             #self.center_y = frame.y_offset
             #########
-        self.texture = self.textures[self._texture_map[t]]
+        self.set_hit_box(self._texture_map[t][1])
+        self.set_texture(self._texture_map[t][0])
 
         #print(self.width,self.height)
         #print(self.texture.__dict__)
@@ -125,6 +127,72 @@ def padding(old_im, new_size):
     new_im.paste(old_im, ((new_size[0]-old_size[0])//2,
                         (new_size[1]-old_size[1])//2))
     return new_im
+
+def merge(boxes):
+#https://stackoverflow.com/a/13851341
+    points = set()
+    for (x1, y1), (x2, y2) in boxes:
+        for pt in ((x1, y1), (x2, y1), (x2, y2), (x1, y2)):
+            if pt in points: # Shared vertice, remove it.
+                points.remove(pt)
+            else:
+                points.add(pt)
+    points = list(points)
+
+    def y_then_x(a, b):
+        if a[1] < b[1] or (a[1] == b[1] and a[0] < b[0]):
+            return -1
+        elif a == b:
+            return 0
+        else:
+            return 1
+
+    sort_x = sorted(points)
+    sort_y = sorted(points, key=cmp_to_key(y_then_x))
+
+    edges_h = {}
+    edges_v = {}
+
+    i = 0
+    while i < len(points):
+        curr_y = sort_y[i][1]
+        while i < len(points) and sort_y[i][1] == curr_y: #//6chars comments, remove it
+            edges_h[sort_y[i]] = sort_y[i + 1]
+            edges_h[sort_y[i + 1]] = sort_y[i]
+            i += 2
+    i = 0
+    while i < len(points):
+        curr_x = sort_x[i][0]
+        while i < len(points) and sort_x[i][0] == curr_x:
+            edges_v[sort_x[i]] = sort_x[i + 1]
+            edges_v[sort_x[i + 1]] = sort_x[i]
+            i += 2
+
+    # Get all the polygons.
+    p = []
+    while edges_h:
+        # We can start with any point.
+        polygon = [(edges_h.popitem()[0], 0)]
+        while True:
+            curr, e = polygon[-1]
+            if e == 0:
+                next_vertex = edges_v.pop(curr)
+                polygon.append((next_vertex, 1))
+            else:
+                next_vertex = edges_h.pop(curr)
+                polygon.append((next_vertex, 0))
+            if polygon[-1] == polygon[0]:
+                # Closed polygon
+                polygon.pop()
+                break
+        # Remove implementation-markers from the polygon.
+        poly = [point for point, _ in polygon]
+        for vertex in poly:
+            if vertex in edges_h: edges_h.pop(vertex)
+            if vertex in edges_v: edges_v.pop(vertex)
+
+        p.append(poly)
+    return p
 
 
 class MyGame(arcade.Window):
