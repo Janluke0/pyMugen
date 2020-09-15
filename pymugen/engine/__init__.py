@@ -4,8 +4,9 @@ from ..formats.air import from_file, LOOP_START
 from PIL import Image
 from functools import cmp_to_key
 
-SPRITE_SCALING = 3
+_DBG = True
 
+SPRITE_SCALING = 3
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 SCREEN_TITLE = "Move Sprite with Keyboard Example"
@@ -114,6 +115,7 @@ class Player(arcade.Sprite):
             #########
         self.set_hit_box(self._texture_map[t][1])
         self.set_texture(self._texture_map[t][0])
+        
 
         #print(self.width,self.height)
         #print(self.texture.__dict__)
@@ -243,6 +245,12 @@ class MyGame(arcade.Window):
 
         # This command has to happen before we start drawing
         arcade.start_render()
+        if _DBG:            
+            tx_size = 30
+            output = f"Action:{str(self.player_list[0]._action.code)}\n"
+            output += f"Texture: {self.player_list[0]._frame_pointer}"
+            y = SCREEN_WIDTH//2
+            arcade.draw_text(output, 5, y, arcade.color.WHITE, tx_size)
 
         # Draw all the sprites.
         self.player_list.draw()
@@ -259,9 +267,9 @@ class MyGame(arcade.Window):
         """Called whenever a key is pressed. """
 
         if key == arcade.key.UP:
-            self.player_sprite.change_y = MOVEMENT_SPEED
+            pass#self.player_sprite.change_y = MOVEMENT_SPEED
         elif key == arcade.key.DOWN:
-            self.player_sprite.change_y = -MOVEMENT_SPEED
+            pass#self.player_sprite.change_y = -MOVEMENT_SPEED
         elif key == arcade.key.LEFT:
             self.player_sprite.change_x = -MOVEMENT_SPEED
         elif key == arcade.key.RIGHT:
