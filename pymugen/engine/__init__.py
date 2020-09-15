@@ -1,6 +1,7 @@
 import arcade, os 
 from ..formats.sff import SFF
 from ..formats.air import from_file, LOOP_START
+from PIL import Image
 
 SPRITE_SCALING = 3
 
@@ -15,9 +16,11 @@ class Player(arcade.Sprite):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        self.sff = SFF("../../tests/test_data/android16/android16.sff")
+        self.sff = SFF("../../tests/test_data/kfm/kfmv1.sff")
         #20 is walking animation
-        self._action = next((a for a in from_file("../../tests/test_data/android16/android16.air", "latin-1") if a.code==20))
+        t = from_file("../../tests/test_data/kfm/kfm.air", "utf-8-sig") 
+        self._actions = next((a for a in t if a.code==0)), next((a for a in t if a.code==20))
+        self._action = self._actions[0]
         self._frame_pointer = 0
 
         self._texture_map = {}
@@ -29,6 +32,7 @@ class Player(arcade.Sprite):
 
         self._texture_ticks = 0
         self.mirrored = False
+        self.fixed_width, self.fixed_height = self.width, self.height
 
     def update(self):
         #print("update")
@@ -45,6 +49,15 @@ class Player(arcade.Sprite):
         elif self.top > SCREEN_HEIGHT - 1:
             self.top = SCREEN_HEIGHT - 1
 
+        if self.velocity[0] == .0 and self.velocity[1] == .0:
+            if self._action != self._actions[0]:
+                self._frame_pointer = 0
+            self._action = self._actions[0]
+        else:
+            if self._action != self._actions[1]:
+                self._frame_pointer = 0
+            self._action = self._actions[1]
+        
         
         
         # Figure out if we should face left or right
@@ -54,7 +67,8 @@ class Player(arcade.Sprite):
             self.mirrored = False
             
         self.animation_tick()
-
+    
+    #def update_animation(self, time_delta):
     def animation_tick(self):
         """update self.texture"""
         frame = self._action.animation_elements[self._frame_pointer]
@@ -69,15 +83,49 @@ class Player(arcade.Sprite):
             self._frame_pointer = 0
         frame = self._action.animation_elements[self._frame_pointer]
         t = frame.group_number, frame.image_number, self.mirrored
-        from PIL import Image
+
         if t not in self._texture_map:
             self._texture_map[t] = len(self.textures)
-            img = self.sff.get_image(*t,use_PIL=True)
+            img = self.sff.get_image(t[0],t[1],use_PIL=True)
             if self.mirrored:
-                #FIXME: loose color on transpose :/
                 img = img.transpose(Image.FLIP_LEFT_RIGHT)
+
+            #FIXME if sprites has different sizes the bigger is shrinked
+            # but not the first time (same problem with animation tools) 
+            #img = arcade.trim_image(img)
+            if False:# img.width < self.fixed_width:
+                img = padding(img,(self.fixed_height,self.fixed_width))
+            
             self.append_texture(arcade.Texture(f"spr_{t[0]}-{t[1]}{'_m' if self.mirrored else ''}",img))
+            #########FIXME: box size looks fine but not positioning 
+            points = []
+            #TODO: merge point to obtain extrernal poligon
+            for cb in frame.collision_boxes:
+                x0, y0, x2, y2 = cb
+                y0, y2 = -y0 - frame.y_offset, -y2 - frame.y_offset
+                # 0-→1
+                # ↑  ↓
+                # 3←-2
+                points.extend([(x0,y0), (x2,y0), (x2,y2), (x0,y2)])
+            self.set_hit_box(points)
+            #self.center_x = frame.x_offset
+            #self.center_y = frame.y_offset
+            #########
         self.texture = self.textures[self._texture_map[t]]
+
+        #print(self.width,self.height)
+        #print(self.texture.__dict__)
+
+def padding(old_im, new_size):
+    old_size = old_im.size
+
+    print(old_size, new_size)
+
+    new_im = Image.new("RGBA", new_size)   
+    new_im.paste(old_im, ((new_size[0]-old_size[0])//2,
+                        (new_size[1]-old_size[1])//2))
+    return new_im
+
 
 class MyGame(arcade.Window):
     """
@@ -130,6 +178,7 @@ class MyGame(arcade.Window):
 
         # Draw all the sprites.
         self.player_list.draw()
+        self.player_list.draw_hit_boxes((0,255,0))
 
     def on_update(self, delta_time):
         """ Movement and game logic """
